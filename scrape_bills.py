@@ -149,17 +149,28 @@ def _strategy_html_table(soup: BeautifulSoup) -> list[dict]:
     target_table: Tag | None = None
     target_headers: list[str] = []
 
+    # We're looking for a real data table whose header row contains
+    # short column labels like "Bill #", "Bill Title", "Action Date".
+    # A single-cell wrapper table whose only "header" is the page
+    # title (e.g. "2026 Tracker of Governor's Action on Bills") must
+    # NOT match here -- so we require both: (a) at least two column
+    # headers, and (b) a header that is specifically a bill-id column
+    # ("Bill #", "Bill Number", "Bill No", or just "Bill"), not merely
+    # one that happens to contain the substring "bill".
+    def _is_bill_id_header(h: str) -> bool:
+        h = h.strip().lower().replace("#", "number")
+        if h in {"bill", "bill number", "bill no", "bill no."}:
+            return True
+        # Tolerate trailing punctuation/whitespace variations.
+        return h.replace(".", "").strip() in {
+            "bill", "bill number", "bill no",
+        }
+
     for table in soup.find_all("table"):
         headers = _table_headers(table)
-        if not headers:
+        if len(headers) < 2:
             continue
-        normalized = [
-            h.strip().lower().replace("#", "number") for h in headers
-        ]
-        if any(
-            ("bill" in h and ("number" in h or "no" in h or h == "bill"))
-            for h in normalized
-        ):
+        if any(_is_bill_id_header(h) for h in headers):
             target_table = table
             target_headers = headers
             break
@@ -187,7 +198,34 @@ def _strategy_html_table(soup: BeautifulSoup) -> list[dict]:
         return []
 
     rows: list[dict] = []
-    for tr in target_table.find_all("tr"):
+    # Iterate only the row set that belongs to *this* table, not rows
+    # from any nested tables. Salesforce VF can wrap a real data
+    # table inside an outer 1x1 <td> -- find_all('tr') would then
+    # also pick up the outer wrapper's <tr> (one giant cell with all
+    # the inner text) and produce a garbage row. Prefer <tbody>'s
+    # direct <tr> children, then fall back to the table's direct <tr>
+    # children.
+    body = target_table.find("tbody")
+    if body is not None:
+        candidate_trs = body.find_all("tr", recursive=False)
+    else:
+        candidate_trs = target_table.find_all("tr", recursive=False)
+    if not candidate_trs:
+        # Some pages don't have a <tbody> and put rows directly under
+        # the table; in that rare case it's still safer to take only
+        # *this* table's own rows by excluding any belonging to a
+        # nested table.
+        nested = {
+            id(tr)
+            for nt in target_table.find_all("table")
+            for tr in nt.find_all("tr")
+        }
+        candidate_trs = [
+            tr for tr in target_table.find_all("tr")
+            if id(tr) not in nested
+        ]
+
+    for tr in candidate_trs:
         cells = tr.find_all("td")
         if not cells:
             continue
@@ -245,15 +283,18 @@ def _strategy_repeated_blocks(soup: BeautifulSoup) -> list[dict]:
     if not candidate_blocks:
         return []
 
-    # Group by (parent identity, tag name, class signature). Largest
-    # group is the row set.
+    # Group sibling blocks by (parent identity, tag name). We
+    # deliberately do NOT key on class, because zebra-striped tables
+    # alternate classes like "dataRow odd" / "dataRow even" on each
+    # row -- splitting on class would cut a 100-row table roughly in
+    # half. Same parent + same tag name is a strong enough signal
+    # that we're looking at a single repeating row set.
     groups: dict[tuple, list[Tag]] = {}
     for block in candidate_blocks:
         parent = block.parent
         if parent is None:
             continue
-        cls = " ".join(block.get("class", []))
-        key = (id(parent), block.name, cls)
+        key = (id(parent), block.name)
         groups.setdefault(key, []).append(block)
 
     if not groups:
@@ -613,6 +654,88 @@ def load_html(args, session: requests.Session) -> str | None:
     return html
 
 
+def sanity_check_rows(
+    rows: list[dict],
+    html: str,
+    required_columns: tuple[str, ...] = (
+        "Bill #",
+        "Bill Title",
+        "House Sponsors",
+        "Senate Sponsors",
+        "Action Date",
+        "Final Bill Action",
+    ),
+    coverage_tolerance: float = 0.05,
+) -> list[str]:
+    """
+    Return a list of human-readable warnings (empty if everything looks
+    fine) about the parsed rows compared to the raw HTML.
+
+    Two kinds of problems get flagged:
+
+    1. Coverage. Count distinct bill IDs in the raw HTML and compare to
+       the number of rows we extracted. If they differ by more than
+       `coverage_tolerance` (default 5%), something in the parser is
+       silently dropping rows -- exactly the bug that produced 51 rows
+       out of 103.
+
+    2. Schema. Make sure the columns downstream code depends on are
+       actually present in the parsed rows. If the page renames
+       "Action Date" to "Date Signed" or drops "Final Bill Action"
+       entirely, this fires before we waste time enriching.
+    """
+    warnings: list[str] = []
+
+    # --- coverage ---------------------------------------------------
+    html_ids: set[str] = set()
+    for m in BILL_ID_RE.finditer(html or ""):
+        html_ids.add(f"{m.group(1)}{m.group(2)}-{m.group(3)}")
+
+    parsed_ids = {
+        (row.get(_find_bill_field(row) or "Bill #") or "").strip()
+        for row in rows
+    }
+    parsed_ids.discard("")
+
+    missing = html_ids - parsed_ids
+    extra = parsed_ids - html_ids
+
+    if html_ids:
+        coverage = len(parsed_ids & html_ids) / len(html_ids)
+        if coverage < (1.0 - coverage_tolerance):
+            sample = ", ".join(sorted(missing)[:8])
+            tail = "" if len(missing) <= 8 else f" (+{len(missing) - 8} more)"
+            warnings.append(
+                f"coverage {coverage:.0%}: parsed {len(parsed_ids)} bills "
+                f"but the page contains {len(html_ids)} distinct bill IDs. "
+                f"Missing: {sample}{tail}"
+            )
+
+    if extra:
+        sample = ", ".join(sorted(extra)[:8])
+        tail = "" if len(extra) <= 8 else f" (+{len(extra) - 8} more)"
+        warnings.append(
+            f"{len(extra)} parsed bill ID(s) do not appear in the raw "
+            f"HTML, which usually means a row was assembled from the "
+            f"wrong cells: {sample}{tail}"
+        )
+
+    # --- schema -----------------------------------------------------
+    if rows:
+        present_columns = set()
+        for row in rows:
+            present_columns.update(row.keys())
+        missing_cols = [c for c in required_columns if c not in present_columns]
+        if missing_cols:
+            warnings.append(
+                f"required column(s) missing from parsed rows: "
+                f"{', '.join(missing_cols)}. Present: "
+                f"{', '.join(sorted(present_columns))}"
+            )
+
+    return warnings
+
+
 def run(output_path: Path, args) -> int:
     session = requests.Session()
     html = load_html(args, session)
@@ -630,6 +753,26 @@ def run(output_path: Path, args) -> int:
         )
         return 1
     print(f"  - found {len(rows)} bills")
+
+    warnings = sanity_check_rows(rows, html)
+    if warnings:
+        print(file=sys.stderr)
+        for w in warnings:
+            print(f"  ! sanity check: {w}", file=sys.stderr)
+        if args.strict:
+            debug_path = Path("tfa_debug.html")
+            debug_path.write_text(html, encoding="utf-8")
+            print(
+                f"\nfailing under --strict because of the warnings above. "
+                f"Raw HTML saved to {debug_path}.",
+                file=sys.stderr,
+            )
+            return 3
+        print(
+            "  - continuing despite warnings (pass --strict to fail "
+            "instead)\n",
+            file=sys.stderr,
+        )
 
     bill_field = _find_bill_field(rows[0]) or "Bill #"
 
@@ -714,6 +857,15 @@ def main() -> None:
         help=(
             "Skip the TFA fetch and parse a saved HTML file instead "
             "(useful for offline debugging)."
+        ),
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help=(
+            "Exit non-zero (code 3) instead of just warning when the "
+            "post-parse sanity checks find a coverage shortfall or a "
+            "missing required column. Use this for scheduled runs."
         ),
     )
     args = parser.parse_args()

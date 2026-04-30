@@ -3,11 +3,10 @@ name: Scrape Colorado bills
 on:
   schedule:
     # GitHub Actions runs in UTC. Mountain time is UTC-6 in summer
-    # (MDT) and UTC-7 in winter (MST). Two cron entries cover both;
-    # the workflow body bails out on whichever entry isn't local
-    # midnight, so the job effectively runs once a day at 12am MT.
+    # (MDT) and UTC-7 in winter (MST).
     - cron: "0 12 * * *"   # 12:00 UTC = 6 a.m. MDT (Mar - Nov)
-    - cron: "0 13 * * *"   # 13:00 UTC = 6 a.m. MST (Nov - Mar)
+    - cron: "0 23 * * *"   # 23:00 UTC = 5 p.m. MDT (Mar - Nov)
+    # - cron: "0 13 * * *"   # 13:00 UTC = 6 a.m. MST (Nov - Mar)
   workflow_dispatch:       # allows manual runs from the Actions tab
 
 permissions:
