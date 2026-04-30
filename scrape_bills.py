@@ -489,11 +489,60 @@ def extract_subjects(soup: BeautifulSoup) -> str:
     return ""
 
 
-def enrich_rows(rows: list[dict], bill_field: str) -> Iterable[dict]:
+def load_existing_enrichment(path: Path) -> dict[str, dict[str, str]]:
+    """
+    Read a previous run's CSV (if present) and return a mapping of
+    Bill # -> {"Long Title": ..., "Subjects": ...} for any rows that
+    have at least a long title. Bills without a long title aren't
+    cached so they get retried next run.
+    """
+    if not path.exists():
+        return {}
+    cache: dict[str, dict[str, str]] = {}
+    try:
+        with path.open("r", newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                bill_id = (row.get("Bill #") or "").strip()
+                long_title = (row.get("Long Title") or "").strip()
+                subjects = (row.get("Subjects") or "").strip()
+                if bill_id and long_title:
+                    cache[bill_id] = {
+                        "Long Title": long_title,
+                        "Subjects": subjects,
+                    }
+    except Exception as exc:  # malformed file shouldn't kill the run
+        print(
+            f"  ! could not read existing CSV at {path}: {exc} "
+            f"(proceeding without cache)",
+            file=sys.stderr,
+        )
+        return {}
+    return cache
+
+
+def enrich_rows(
+    rows: list[dict],
+    bill_field: str,
+    cache: dict[str, dict[str, str]],
+) -> Iterable[dict]:
     session = requests.Session()
     total = len(rows)
+    cached_hits = 0
     for i, row in enumerate(rows, start=1):
         bill_id = (row.get(bill_field) or "").strip()
+
+        # Use the cached enrichment if we already have it. Bill summaries
+        # on coleg.gov are stable once a bill is signed, so a single
+        # successful fetch is good for the life of this dataset.
+        if bill_id in cache:
+            row["Long Title"] = cache[bill_id]["Long Title"]
+            row["Subjects"] = cache[bill_id]["Subjects"]
+            cached_hits += 1
+            print(f"[{i}/{total}] {bill_id} ... cached")
+            yield row
+            continue
+
         print(f"[{i}/{total}] {bill_id} ...", end=" ", flush=True)
 
         long_title, subjects = "", ""
@@ -514,9 +563,15 @@ def enrich_rows(rows: list[dict], bill_field: str) -> Iterable[dict]:
             bits.append("subjects MISSING")
         print(" | ".join(bits))
 
-        if i < total:
-            time.sleep(SLEEP_BETWEEN)
+        # Polite pause only between live fetches.
+        time.sleep(SLEEP_BETWEEN)
         yield row
+
+    if cached_hits:
+        print(
+            f"  - skipped {cached_hits} bill(s) already enriched in "
+            f"the existing CSV"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -558,7 +613,7 @@ def load_html(args, session: requests.Session) -> str | None:
     return html
 
 
-def run(output_path: Path, args) -> None:
+def run(output_path: Path, args) -> int:
     session = requests.Session()
     html = load_html(args, session)
 
@@ -568,10 +623,12 @@ def run(output_path: Path, args) -> None:
     if not rows:
         debug_path = Path("tfa_debug.html")
         debug_path.write_text(html, encoding="utf-8")
-        sys.exit(
+        print(
             f"no bill rows extracted. The raw HTML was saved to "
-            f"{debug_path} so you can inspect (or send) the structure."
+            f"{debug_path} so you can inspect (or send) the structure.",
+            file=sys.stderr,
         )
+        return 1
     print(f"  - found {len(rows)} bills")
 
     bill_field = _find_bill_field(rows[0]) or "Bill #"
@@ -583,8 +640,14 @@ def run(output_path: Path, args) -> None:
                 fieldnames.append(key)
     fieldnames += ["Long Title", "Subjects"]
 
+    # Load any prior run's enrichment so we don't re-fetch bills whose
+    # summaries we already have.
+    cache = load_existing_enrichment(output_path)
+    if cache:
+        print(f"  - cache: {len(cache)} bill(s) already enriched")
+
     print(f"\nenriching from {COLEG_BASE} ...")
-    enriched = list(enrich_rows(rows, bill_field))
+    enriched = list(enrich_rows(rows, bill_field, cache))
 
     with output_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
@@ -593,7 +656,33 @@ def run(output_path: Path, args) -> None:
         writer.writeheader()
         writer.writerows(enriched)
 
+    # Surface partial failures so a scheduled run can be flagged. Each
+    # missing field is counted separately; a bill could be missing one
+    # but not the other.
+    missing_titles = [r for r in enriched if not r.get("Long Title")]
+    missing_subjects = [r for r in enriched if not r.get("Subjects")]
     print(f"\nwrote {len(enriched)} rows to {output_path}")
+
+    if missing_titles or missing_subjects:
+        if missing_titles:
+            ids = ", ".join(r.get(bill_field, "?") for r in missing_titles[:8])
+            extra = "" if len(missing_titles) <= 8 else f" (+{len(missing_titles) - 8} more)"
+            print(
+                f"  ! {len(missing_titles)} bill(s) missing long title: "
+                f"{ids}{extra}",
+                file=sys.stderr,
+            )
+        if missing_subjects:
+            ids = ", ".join(r.get(bill_field, "?") for r in missing_subjects[:8])
+            extra = "" if len(missing_subjects) <= 8 else f" (+{len(missing_subjects) - 8} more)"
+            print(
+                f"  ! {len(missing_subjects)} bill(s) missing subjects: "
+                f"{ids}{extra}",
+                file=sys.stderr,
+            )
+        return 2  # partial failure
+
+    return 0
 
 
 def main() -> None:
@@ -628,7 +717,7 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
-    run(args.output_csv, args)
+    sys.exit(run(args.output_csv, args))
 
 
 if __name__ == "__main__":

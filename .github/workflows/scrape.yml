@@ -1,0 +1,111 @@
+name: Scrape Colorado bills
+
+on:
+  schedule:
+    # GitHub Actions runs in UTC. Mountain time is UTC-6 in summer
+    # (MDT) and UTC-7 in winter (MST). Two cron entries cover both;
+    # the workflow body bails out on whichever entry isn't local
+    # midnight, so the job effectively runs once a day at 12am MT.
+    - cron: "0 6 * * *"   # 06:00 UTC = midnight MDT (Mar - Nov)
+    - cron: "0 7 * * *"   # 07:00 UTC = midnight MST (Nov - Mar)
+  workflow_dispatch:       # allows manual runs from the Actions tab
+
+permissions:
+  contents: write          # needed to commit the updated CSV
+
+concurrency:
+  group: scrape-co-bills
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Skip the cron entry that isn't local midnight today
+        id: gate
+        run: |
+          # Determine whether Denver is currently in MDT or MST and
+          # only proceed for the matching cron entry. Manual runs
+          # always proceed.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          OFFSET=$(TZ=America/Denver date +%z)   # e.g. -0600 or -0700
+          HOUR_UTC=$(date -u +%H)                 # current UTC hour
+          if [ "$OFFSET" = "-0600" ] && [ "$HOUR_UTC" = "06" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          elif [ "$OFFSET" = "-0700" ] && [ "$HOUR_UTC" = "07" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping: cron entry doesn't match local midnight (offset=$OFFSET, hour=$HOUR_UTC)"
+          fi
+
+      - name: Check out repository
+        if: steps.gate.outputs.proceed == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        if: steps.gate.outputs.proceed == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies
+        if: steps.gate.outputs.proceed == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 playwright
+
+      - name: Install Playwright browser
+        if: steps.gate.outputs.proceed == 'true'
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run scraper
+        if: steps.gate.outputs.proceed == 'true'
+        id: scrape
+        # Don't fail the whole workflow on partial failure (exit 2);
+        # we still want to commit whatever we got. A hard failure
+        # (exit 1, no rows at all) does fail the run.
+        run: |
+          set +e
+          python scrape_bills.py co_bills_2026.csv
+          status=$?
+          set -e
+          echo "scrape_status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" -eq 0 ]; then
+            echo "Scrape completed cleanly."
+          elif [ "$status" -eq 2 ]; then
+            echo "::warning::Scrape completed with partial failures (some bills missing long title or subjects)."
+          else
+            echo "::error::Scrape failed with exit code $status."
+            exit "$status"
+          fi
+
+      - name: Commit updated CSV if changed
+        if: steps.gate.outputs.proceed == 'true' && steps.scrape.outputs.scrape_status != '1'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add co_bills_2026.csv
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            STAMP=$(TZ=America/Denver date +'%Y-%m-%d')
+            git commit -m "Nightly scrape: $STAMP"
+            git push
+          fi
+
+      - name: Upload debug artifact on failure
+        if: failure() && steps.gate.outputs.proceed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfa-debug-html
+          path: |
+            tfa_debug.html
+            tfa_debug_rendered.html
+          if-no-files-found: ignore
