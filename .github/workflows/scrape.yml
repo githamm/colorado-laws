@@ -6,8 +6,8 @@ on:
     # (MDT) and UTC-7 in winter (MST). Two cron entries cover both;
     # the workflow body bails out on whichever entry isn't local
     # midnight, so the job effectively runs once a day at 12am MT.
-    - cron: "0 6 * * *"   # 06:00 UTC = midnight MDT (Mar - Nov)
-    - cron: "0 7 * * *"   # 07:00 UTC = midnight MST (Nov - Mar)
+    - cron: "0 12 * * *"   # 12:00 UTC = 6 a.m. MDT (Mar - Nov)
+    - cron: "0 13 * * *"   # 13:00 UTC = 6 a.m. MST (Nov - Mar)
   workflow_dispatch:       # allows manual runs from the Actions tab
 
 permissions:
