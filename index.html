@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Colorado Bills Signed Into Law — 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fbf9f4;
+    --surface: #ffffff;
+    --ink: #1a1612;
+    --ink-soft: #5b554d;
+    --ink-muted: #8a8378;
+    --rule: #e7e1d4;
+    --rule-strong: #d8d0bf;
+    --accent: #b15a1e;          /* burnt amber */
+    --accent-soft: #f6e9d8;
+    --accent-ink: #6b3411;
+    --house: #3b6e57;            /* moss */
+    --senate: #8a3c3c;            /* brick */
+    --row-hover: #fdf6e8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    line-height: 1.5;
+  }
+  .wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+
+  /* Header */
+  header {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .lede {
+    color: var(--ink-soft);
+    max-width: 64ch;
+    font-size: 16px;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  /* Filter bar */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .search {
+    flex: 1 1 280px;
+    min-width: 0;
+    position: relative;
+  }
+  .search input {
+    width: 100%;
+    padding: 10px 36px 10px 36px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    font: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .search input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(177, 90, 30, 0.15);
+  }
+  .search-icon, .search-clear {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-muted);
+    pointer-events: none;
+  }
+  .search-icon { left: 12px; }
+  .search-clear {
+    right: 8px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    pointer-events: auto;
+    padding: 4px;
+    display: none;
+    color: var(--ink-soft);
+  }
+  .search-clear.visible { display: block; }
+  .search-clear:hover { color: var(--ink); }
+
+  select {
+    padding: 10px 32px 10px 12px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    font: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%238a8378' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M2.5 4.5l3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    transition: border-color .15s;
+  }
+  select:focus, select:hover { border-color: var(--accent); outline: none; }
+  select optgroup {
+    font-weight: 700;
+    font-style: normal;
+    color: var(--ink-muted);
+    background: var(--bg);
+  }
+  select option {
+    color: var(--ink);
+    font-weight: 400;
+  }
+
+  .ceremony-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    font: inherit;
+    font-size: 14px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .ceremony-toggle:hover {
+    border-color: var(--accent);
+    color: var(--ink);
+  }
+  .ceremony-toggle-star {
+    color: var(--accent);
+    font-size: 14px;
+    line-height: 1;
+  }
+  .ceremony-toggle[aria-pressed="true"] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+  .ceremony-toggle[aria-pressed="true"] .ceremony-toggle-star {
+    color: var(--accent);
+  }
+
+  .filter-row-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .reset-btn {
+    background: none;
+    border: 0;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 6px;
+    font-size: 13px;
+    border-radius: 4px;
+  }
+  .reset-btn:hover { background: var(--accent-soft); }
+
+  /* Table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  thead th {
+    text-align: left;
+    background: #f6f1e6;
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--rule-strong);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    user-select: none;
+    white-space: nowrap;
+  }
+  thead th.sortable {
+    cursor: pointer;
+  }
+  thead th.sortable:hover { color: var(--accent); }
+  .sort-arrow {
+    display: inline-block;
+    margin-left: 4px;
+    color: var(--ink-muted);
+    font-size: 10px;
+    width: 10px;
+  }
+  th.sorted-asc .sort-arrow,
+  th.sorted-desc .sort-arrow { color: var(--accent); }
+
+  tbody tr.bill-row {
+    border-bottom: 1px solid var(--rule);
+    cursor: pointer;
+    transition: background .1s;
+  }
+  tbody tr.bill-row:hover { background: var(--row-hover); }
+  tbody tr.bill-row.expanded { background: var(--row-hover); }
+  tbody tr.bill-row td { padding: 12px 14px; vertical-align: top; }
+
+  .bill-id {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .bill-id.house  { color: var(--house); }
+  .bill-id.senate { color: var(--senate); }
+
+  .bill-title {
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  .bill-date {
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+
+  .subject-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #efe8d8;
+    color: var(--ink-soft);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background .12s, color .12s;
+  }
+  .bill-row:hover .tag { background: #e6dcc4; }
+
+  .ceremony-mark {
+    display: inline-block;
+    color: var(--accent);
+    font-size: 14px;
+    margin-right: 4px;
+  }
+
+  /* Detail row */
+  tr.detail-row {
+    background: #faf6ec;
+  }
+  tr.detail-row td {
+    padding: 0 14px 18px 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .detail-content {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 24px;
+    padding-top: 4px;
+    border-top: 2px solid var(--accent);
+    padding: 16px 0 4px;
+  }
+  .detail-section h4 {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin: 0 0 8px;
+    font-weight: 700;
+  }
+  .long-title {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink);
+    margin: 0 0 12px;
+    font-weight: 400;
+  }
+  .sponsor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sponsor-line {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .sponsor-label {
+    display: inline-block;
+    width: 56px;
+    color: var(--ink-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+  .external-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+  .external-link:hover { text-decoration: underline; }
+
+  /* No-results */
+  .empty-state {
+    padding: 48px 20px;
+    text-align: center;
+    color: var(--ink-muted);
+    font-style: italic;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    font-size: 12px;
+    color: var(--ink-muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  footer a { color: var(--ink-soft); }
+
+  /* Responsive */
+  @media (max-width: 780px) {
+    .wrap { padding: 20px 14px 48px; }
+    /* On mobile, hide subjects column to save space */
+    th.col-subjects, td.col-subjects { display: none; }
+    thead th { padding: 10px 10px; font-size: 10px; }
+    tbody tr.bill-row td { padding: 10px 10px; }
+    .detail-content { grid-template-columns: 1fr; gap: 16px; }
+  }
+  @media (max-width: 520px) {
+    th.col-date, td.col-date { display: none; }
+    .bill-title { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">75th General Assembly · 2026 Regular Session</div>
+    <p class="lede">A register of bills signed into law by Gov. Jared Polis during the 2026 legislative session. Search, filter and sort. Click any row to read the full long title and prime sponsors.</p>
+  </header>
+
+  <div class="filters">
+    <select id="subjectFilter" aria-label="Filter by subject"></select>
+    <select id="sponsorFilter" aria-label="Filter by sponsor"></select>
+    <button id="ceremonyToggle" class="ceremony-toggle" aria-pressed="false" title="Show only bills signed in a public ceremony">
+      <span class="ceremony-toggle-star">★</span>
+      <span class="ceremony-toggle-label">Ceremonial signings</span>
+    </button>
+    <div class="search">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="11" y1="11" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="search" type="text" placeholder="Search bill number, title, sponsor, or topic…" autocomplete="off">
+      <button class="search-clear" id="searchClear" aria-label="Clear search">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <line x1="3" y1="3" x2="11" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="11" y1="3" x2="3" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="filter-row-meta">
+    <span id="resultCount"></span>
+    <button id="resetBtn" class="reset-btn" hidden>Reset filters</button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="billTable">
+      <thead>
+        <tr>
+          <th class="sortable col-id"      data-sort="id">Bill <span class="sort-arrow"></span></th>
+          <th class="sortable col-title"   data-sort="title">Title <span class="sort-arrow"></span></th>
+          <th class="sortable col-date"    data-sort="date">Signed <span class="sort-arrow">↓</span></th>
+          <th             col-subjects     class="col-subjects">Subjects</th>
+        </tr>
+      </thead>
+      <tbody id="billBody"></tbody>
+    </table>
+    <div id="emptyState" class="empty-state" hidden>No bills match the current filters.</div>
+  </div>
+
+  <footer>
+    <span>Source: Colorado General Assembly · Office of the Governor</span>
+    <span id="lastEntry"></span>
+  </footer>
+
+</div>
+
+<script>
+const BILLS = [{"id":"HB26-1002","title":"Provider Participation in Health Insurance","date":"2026-04-27","action":"Sign - Administratively","house":["K. Brown","L. Gilchrist"],"senate":["M. Ball","B. Pelton"],"longTitle":"Concerning measures to increase patient access to behavioral health providers, and, in connection therewith, efforts to enhance provider participation in health-care provider networks, reimbursement of prelicensed providers who provide mental health services under the supervision of a licensed provider, and decreasing the clinical hours required to become a licensed clinical social worker.","subjects":["Health Care & Health Insurance"]},{"id":"HB26-1013","title":"Ratio Utility Billing Systems","date":"2026-03-26","action":"Sign - Administratively","house":["E. Sirota","J. Mabrey"],"senate":["L. Cutter","M. Weissman"],"longTitle":"Concerning the use of a ratio utility billing system by a landlord to allocate utility charges to tenants.","subjects":["Housing"]},{"id":"HB26-1020","title":"Colorimetric Field Drug Tests in Drug Possessions","date":"2026-03-26","action":"Sign - Administratively","house":["L. Gilchrist","J. Bacon"],"senate":["M. Ball","L. Frizell"],"longTitle":"Concerning colorimetric field drug tests in cases involving drug possession.","subjects":["Crimes, Corrections, & Enforcement"]},{"id":"HB26-1024","title":"Raising Age of Voluntary Relinquishment of Child","date":"2026-04-27","action":"Sign - Administratively","house":["R. Keltie","G. Rydin"],"senate":["L. Frizell","J. Marchman"],"longTitle":"Concerning raising the age of a child who may be voluntarily relinquished from seventy-two hours old to thirty days old or younger.","subjects":["Children & Domestic Matters"]},{"id":"HB26-1027","title":"BOCES Definition & Executive Director","date":"2026-03-12","action":"Sign - Administratively","house":["T. Story","K. Stewart"],"senate":["C. Kolker"],"longTitle":"Concerning boards of cooperative services, and, in connection therewith, permitting a retiree to work as an executive director of a board of cooperative services without losing retirement benefits and clarifying board of cooperative services eligibility for postsecondary and workforce readiness funding.","subjects":["Education & School Finance (Pre & K-12)"]},{"id":"HB26-1035","title":"Enactment of Colorado Revised Statutes 2025","date":"2026-03-26","action":"Sign - Administratively","house":["M. Soper","S. Woodrow"],"senate":["M. Weissman","L. Frizell"],"longTitle":"Concerning the enactment of the Colorado Revised Statutes 2025 as the positive and statutory law of the state of Colorado.","subjects":["General Assembly"]},{"id":"HB26-1040","title":"Sterilization Rights of Person with Disabilities","date":"2026-03-27","action":"Sign - Administratively","house":["M. Froelich"],"senate":["L. Cutter"],"longTitle":"Concerning the sterilization rights of a person with intellectual and developmental disabilities.","subjects":["Health Care & Health Insurance"]},{"id":"HB26-1042","title":"Dry Needling by Occupational Therapists","date":"2026-04-02","action":"Sign - Administratively","house":["L. Feret","B. Bradley"],"senate":["M. Ball"],"longTitle":"Concerning dry needling by occupational therapists.","subjects":["Professions & Occupations"]},{"id":"HB26-1067","title":"Diseased Livestock Indemnity Fund","date":"2026-03-24","action":"Sign - Ceremony","house":["K. McCormick","T. Winter"],"senate":["B. Pelton","D. Roberts"],"longTitle":"Concerning using money in the diseased livestock indemnity fund to address threats to livestock health.","subjects":["Agriculture"]},{"id":"HB26-1070","title":"Third-Party Network Agreements for Dental Services","date":"2026-04-13","action":"Sign - Administratively","house":["A. Hartsook","K. Brown"],"senate":["I. Jodeh","L. Frizell"],"longTitle":"Concerning third-party network lease agreements for dental services.","subjects":["Health Care & Health Insurance","Insurance"]},{"id":"HB26-1090","title":"Teacher Licensing Requirements","date":"2026-04-20","action":"Sign - Administratively","house":["S. Luck","M. Martinez"],"senate":["J. Gonzales"],"longTitle":"Concerning teacher licensing requirements.","subjects":["Education & School Finance (Pre & K-12)"]},{"id":"HB26-1115","title":"Prepaid Wireless Telecom Services Modifications","date":"2026-03-26","action":"Sign - Administratively","house":["A. Boesenecker","K. Stewart"],"senate":["D. Roberts","S. Bright"],"longTitle":"Concerning modifications to the prepaid wireless telecommunications service charges.","subjects":["Local Government"]},{"id":"HB26-1134","title":"Fairness & Transparency in Municipal Court","date":"2026-04-27","action":"Sign - Administratively","house":["J. Mabrey","E. Velasco"],"senate":["J. Amabile","M. Weissman"],"longTitle":"Concerning measures to ensure that municipal court defendants are subject to conditions similar to state court defendants.","subjects":["Courts & Judicial"]},{"id":"HB26-1142","title":"Child Advocacy Centers","date":"2026-04-13","action":"Sign - Administratively","house":["R. Taggart","A. Boesenecker"],"senate":["D. Roberts","M. Ball"],"longTitle":"Concerning child advocacy centers in cases of child maltreatment.","subjects":["Children & Domestic Matters"]},{"id":"HB26-1150","title":"Department of Agriculture Supplemental","date":"2026-02-27","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning a supplemental appropriation to the department of agriculture.","subjects":["State Revenue & Budget"]},{"id":"HB26-1152","title":"Department of Early Childhood Supplemental","date":"2026-03-12","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning a supplemental appropriation to the department of early childhood.","subjects":["State Revenue & Budget"]},{"id":"HB26-1154","title":"Department of Governor, Lt. Governor, and Office of State Planning & Budgeting Supplemental","date":"2026-03-12","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning a supplemental appropriation to the offices of the governor, lieutenant governor, and state planning and budgeting.","subjects":["State Revenue & Budget"]},{"id":"HB26-1156","title":"Department of Higher Education Supplemental","date":"2026-03-12","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning a supplemental appropriation to the department of higher education.","subjects":["State Revenue & Budget"]},{"id":"HB26-1158","title":"Judicial Department Supplemental","date":"2026-03-12","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning a supplemental appropriation to the judicial department.","subjects":["State Revenue & Budget"]},{"id":"HB26-1160","title":"Department of Law Supplemental","date":"2026-03-12","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning a supplemental appropriation to the department of law.","subjects":["State Revenue & Budget"]},{"id":"HB26-1162","title":"Department of Military Affairs Supplemental","date":"2026-03-12","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning a supplemental appropriation to the department of military and veterans affairs.","subjects":["State Revenue & Budget"]},{"id":"HB26-1164","title":"Department of Personnel Supplemental","date":"2026-03-12","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning a supplemental appropriation to the department of personnel.","subjects":["State Revenue & Budget"]},{"id":"HB26-1166","title":"Department of Public Safety Supplemental","date":"2026-03-12","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning a supplemental appropriation to the department of public safety.","subjects":["State Revenue & Budget"]},{"id":"HB26-1168","title":"Department of Revenue Supplemental","date":"2026-03-12","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning a supplemental appropriation to the department of revenue.","subjects":["State Revenue & Budget"]},{"id":"HB26-1170","title":"Department of Transportation Supplemental","date":"2026-03-26","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning a supplemental appropriation to the department of transportation.","subjects":["State Revenue & Budget"]},{"id":"HB26-1172","title":"Capital Construction Supplemental","date":"2026-03-26","action":"Sign - Administratively","house":["E. Sirota"],"senate":["J. Bridges"],"longTitle":"Concerning funding for capital construction, and making supplemental appropriations in connection therewith.","subjects":["State Revenue & Budget"]},{"id":"HB26-1174","title":"School Finance Mid-Year Adjustments","date":"2026-03-26","action":"Sign - Administratively","house":["K. Brown","R. Taggart"],"senate":["J. Amabile","B. Kirkmeyer"],"longTitle":"Concerning adjustments to school funding for the 2025-26 budget year, and, in connection therewith, reducing an appropriation.","subjects":["Education & School Finance (Pre & K-12)"]},{"id":"HB26-1176","title":"Modify Fourth-Year Innovation Pilot Program","date":"2026-03-26","action":"Sign - Administratively","house":["E. Sirota","R. Taggart"],"senate":["J. Amabile","J. Bridges"],"longTitle":"Concerning modifications to the fourth-year innovation pilot program, and, in connection therewith, reducing an appropriation.","subjects":["Education & School Finance (Pre & K-12)","Higher Education"]},{"id":"HB26-1178","title":"Expenditures in Excess of Appropriations","date":"2026-03-26","action":"Sign - Administratively","house":["K. Brown","E. Sirota"],"senate":["J. Amabile","B. Kirkmeyer"],"longTitle":"Concerning the controller's allowance of expenditures in excess of appropriations.","subjects":["State Revenue & Budget"]},{"id":"HB26-1180","title":"Sunset Business Intelligence Center Advisory Board","date":"2026-04-13","action":"Sign - Administratively","house":["B. Marshall","R. Gonzalez"],"senate":["N. Hinrichsen"],"longTitle":"Concerning the continuation of the business intelligence center advisory board, and, in connection therewith, implementing the recommendation of the department of regulatory agencies' 2025 sunset report by repealing the advisory board.","subjects":["Business & Economic Development","State Government"]},{"id":"HB26-1185","title":"Sunset Cold Case Task Force","date":"2026-04-13","action":"Sign - Administratively","house":["M. Carter","C. Clifford"],"senate":["D. Roberts"],"longTitle":"Concerning the continuation of the cold case task force, and, in connection therewith, implementing the recommendations of the department of regulatory agencies in the department's 2025 sunset report, including authorizing the executive director of the department of public safety to appoint additional members to the task force, continuing the task force for thirteen years, and changing the type of sunset review that is conducted by the department.","subjects":["State Government"]},{"id":"HB26-1191","title":"Examination of School District Records","date":"2026-04-13","action":"Sign - Administratively","house":["D. Johnson","J. Bacon"],"senate":["L. Frizell","M. Weissman"],"longTitle":"Concerning the examination of a school district that receives state education fund money for capital construction projects for qualified charter schools in the district, and, in connection therewith, making the state auditor's examination of the school district's records discretionary rather than mandatory.","subjects":["Education & School Finance (Pre & K-12)"]},{"id":"HB26-1198","title":"Access to Veterinary Care","date":"2026-04-29","action":"Sign - Ceremony","house":["K. McCormick","T. Winter"],"senate":["L. Cutter","R. Pelton"],"longTitle":"Concerning increasing access to veterinary care, and, in connection therewith, expediting the process by which a veterinarian is licensed by endorsement, clarifying the use of prescription drugs and compounded drugs by veterinarians, and establishing a program for the donation of veterinary drugs.","subjects":["Professions & Occupations"]},{"id":"HB26-1205","title":"Colorado State Forest Service Good Neighbor Authority","date":"2026-04-13","action":"Sign - Administratively","house":["E. Velasco","T. Mauro"],"senate":["L. Cutter","M. Baisley"],"longTitle":"Concerning changes to state law to reflect the federal expansion of good neighbor authority agreements.","subjects":["Natural Resources & Environment","State Government"]},{"id":"HB26-1339","title":"Change Cesar Chavez Day to Farm Workers Day","date":"2026-03-31","action":"Sign - Administratively","house":["M. Duran","L. Garcia"],"senate":["J. Danielson","L. Cutter"],"longTitle":"Concerning a change in the name of the voluntary legal holiday observed on March 31 from \"Cesar Chavez Day\" to \"Farm Workers Day\".","subjects":["State Government"]},{"id":"SB26-004","title":"Expand List of Petitioners for Protection Order","date":"2026-04-06","action":"Sign - Administratively","house":["M. Froelich","J. Willford"],"senate":["T. Sullivan","J. Gonzales"],"longTitle":"Concerning who may petition a court for an extreme risk protection order.","subjects":["Courts & Judicial"]},{"id":"SB26-009","title":"Charitable Organization State Sales & Use Tax","date":"2026-04-20","action":"Sign - Administratively","house":["J. McCluskie","R. Stewart"],"senate":["W. Lindstedt","M. Snyder"],"longTitle":"Concerning the determination of whether an entity is a charitable organization for purposes of state sales and use tax.","subjects":["Fiscal Policy & Taxes"]},{"id":"SB26-011","title":"Search Warrants Provided to Covered Platforms","date":"2026-03-30","action":"Sign - Ceremony","house":["A. Boesenecker","J. Caldwell"],"senate":["L. Frizell","D. Roberts"],"longTitle":"Concerning search warrant requirements for operators of certain electronic platforms.","subjects":["Crimes, Corrections, & Enforcement"]},{"id":"SB26-014","title":"Modification to Defense of Not Guilty by Reason of Insanity","date":"2026-04-20","action":"Sign - Administratively","house":["G. Rydin","M. Soper"],"senate":["J. Amabile"],"longTitle":"Concerning modifications to the affirmative defense of not guilty by reason of insanity.","subjects":["Courts & Judicial","Crimes, Corrections, & Enforcement","Human Services"]},{"id":"SB26-018","title":"Legal Protections for Dignity of Minors","date":"2026-04-20","action":"Sign - Administratively","house":["M. Froelich","L. Garcia"],"senate":["K. Wallace","C. Kolker"],"longTitle":"Concerning legal protections for the dignity of a minor, and, in connection therewith, suppressing a court record associated with changing a minor's name.","subjects":["Children & Domestic Matters","Courts & Judicial"]},{"id":"SB26-025","title":"Monument Records Placement Submission Maintenance","date":"2026-04-20","action":"Sign - Administratively","house":["B. Marshall","M. Soper"],"senate":["J. Rich","M. Snyder"],"longTitle":"Concerning land survey monumentation.","subjects":["Local Government","State Government"]},{"id":"SB26-031","title":"Use of Prescription Product with Controlled Substance","date":"2026-04-20","action":"Sign - Administratively","house":["S. Camacho","M. Soper"],"senate":["W. Lindstedt","J. Rich"],"longTitle":"Concerning the lawful use of a prescription drug product containing a schedule I controlled substance.","subjects":["Crimes, Corrections, & Enforcement"]},{"id":"SB26-034","title":"Auraria Board Student & Faculty Participation","date":"2026-03-27","action":"Sign - Administratively","house":["E. Hamrick","J. Bacon"],"senate":["C. Kolker","J. Marchman"],"longTitle":"Concerning expanding participation by members of the Auraria board of directors advisory committees.","subjects":["Higher Education"]},{"id":"SB26-039","title":"Fire and Police Pension Association Disability and Survivor Benefits","date":"2026-04-06","action":"Sign - Administratively","house":["A. Boesenecker","R. Taggart"],"senate":["M. Snyder","B. Pelton"],"longTitle":"Concerning the administration by the fire and police pension association of disability and survivor benefits.","subjects":["Local Government","State Government"]},{"id":"SB26-047","title":"Colorado Firefighter Safety Act Petition Elections","date":"2026-04-20","action":"Sign - Administratively","house":["S. Camacho","J. Phillips"],"senate":["J. Danielson","J. Marchman"],"longTitle":"Concerning changes to the definition of a general election for the purpose of submitting a question to the voters to allow firefighters to collectively bargain with their public employers.","subjects":["Elections & Redistricting","Labor & Employment","Local Government"]},{"id":"SB26-052","title":"Coal Transition Community Investment","date":"2026-03-09","action":"Sign - Administratively","house":["M. Lukens","T. Mauro"],"senate":["D. Roberts","M. Catlin"],"longTitle":"Concerning coal transition communities, and, in connection therewith, providing a hiring preference for coal transition workers in coal transition communities and expanding the allowable ways in which a public entity may deposit or invest just transition money.","subjects":["Labor & Employment"]},{"id":"SB26-054","title":"Security Deposits & Post-Closing Occupancy Agreements","date":"2026-04-20","action":"Sign - Administratively","house":["N. Ricks","C. Richardson"],"senate":["M. Catlin","M. Snyder"],"longTitle":"Concerning an exception to the statutory limit on the amount that a landlord may require a tenant to provide as a security deposit in cases where the landlord and tenant have executed a post-closing occupancy agreement.","subjects":["Housing"]},{"id":"SB26-064","title":"Modify Colorado Agricultural Future Loan Program","date":"2026-03-24","action":"Sign - Ceremony","house":["K. McCormick","M. Soper"],"senate":["C. Simpson","D. Roberts"],"longTitle":"Concerning modifying the Colorado agricultural future loan program to allow certain eligible entities to qualify for funding from the program.","subjects":["Agriculture","Business & Economic Development"]},{"id":"SB26-077","title":"Epilepsy-Related Mortality Awareness","date":"2026-04-20","action":"Sign - Administratively","house":["L. Gilchrist","K. Stewart"],"senate":["I. Jodeh"],"longTitle":"Concerning epilepsy-related mortality awareness.","subjects":["Health Care & Health Insurance","State Government"]},{"id":"SB26-088","title":"Funding for Memorials on State Capitol Grounds","date":"2026-04-20","action":"Sign - Administratively","house":["T. Winter","M. Martinez"],"senate":["B. Kirkmeyer","J. Carson"],"longTitle":"Concerning the grounds surrounding the state capitol building, and, in connection therewith, providing for the maintenance and repair of memorials and monuments on the capitol grounds and in Lincoln veterans' memorial park.","subjects":["State Government"]},{"id":"SB26-118","title":"Legacy Giving to Charitable Organizations","date":"2026-04-17","action":"Sign - Ceremony","house":["C. Clifford"],"senate":["J. Coleman","C. Simpson"],"longTitle":"Concerning the payment of designated benefits to a charitable organization upon the death of a donor.","subjects":["Financial Services & Commerce","Probate, Trusts, & Fiduciaries"]}];
+
+// ---------- helpers ----------
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+function fmtDate(iso) {
+  const [y, m, d] = iso.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[parseInt(m,10)-1]} ${parseInt(d,10)}, ${y}`;
+}
+function chamberOf(id) { return id.startsWith('HB') ? 'house' : 'senate'; }
+
+// ---------- state ----------
+const state = {
+  query: '',
+  sponsor: '',
+  ceremony: false,
+  subject: '',
+  sortKey: 'date',
+  sortDir: 'desc',  // newest first by default
+  expanded: new Set(),
+};
+
+// ---------- department capitalization ----------
+// Known Colorado state departments — we capitalize "department of X"
+// to "Department of X" only when X matches one of these. Sorted
+// longest-first so multi-word names beat their shorter prefixes.
+const DEPARTMENTS = [
+  "Health Care Policy and Financing",
+  "Public Health and Environment",
+  "Military and Veterans Affairs",
+  "Labor and Employment",
+  "Regulatory Agencies",
+  "Higher Education",
+  "Early Childhood",
+  "Natural Resources",
+  "Public Safety",
+  "Local Affairs",
+  "Human Services",
+  "Transportation",
+  "Corrections",
+  "Agriculture",
+  "Personnel",
+  "Education",
+  "Treasury",
+  "Revenue",
+  "State",
+  "Law",
+].sort((a, b) => b.length - a.length);
+
+const DEPT_REGEX = new RegExp(
+  '\\bdepartment of (' + DEPARTMENTS.map(d =>
+    d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  ).join('|') + ')\\b',
+  'gi'
+);
+
+function capitalizeDepartments(text) {
+  return text.replace(DEPT_REGEX, (_match, dept) => {
+    // Find the canonical-cased version of dept
+    const canon = DEPARTMENTS.find(d => d.toLowerCase() === dept.toLowerCase());
+    return 'Department of ' + (canon || dept);
+  });
+}
+
+// ---------- populate static UI ----------
+function buildSubjectFilter() {
+  const counts = new Map();
+  BILLS.forEach(b => b.subjects.forEach(s => counts.set(s, (counts.get(s)||0)+1)));
+  const subjects = [...counts.entries()].sort((a,b) => a[0].localeCompare(b[0]));
+  const sel = document.getElementById('subjectFilter');
+  sel.innerHTML = `<option value="">All subjects</option>` +
+    subjects.map(([s, c]) => `<option value="${escapeHtml(s)}">${escapeHtml(s)} (${c})</option>`).join('');
+}
+
+function buildSponsorFilter() {
+  // Tally bills per sponsor in each chamber. A legislator only serves
+  // in one chamber, so each name appears in just one of the two lists.
+  const houseCounts = new Map();
+  const senateCounts = new Map();
+  BILLS.forEach(b => {
+    b.house.forEach(s => houseCounts.set(s, (houseCounts.get(s)||0)+1));
+    b.senate.forEach(s => senateCounts.set(s, (senateCounts.get(s)||0)+1));
+  });
+
+  // Sort by last name ("M. Duran" -> "Duran"; "L. Garcia Sander" -> "Sander")
+  const lastNameKey = name => {
+    const afterInitial = name.replace(/^\w\.\s+/, '');
+    const parts = afterInitial.split(/\s+/);
+    return [parts[parts.length - 1].toLowerCase(), afterInitial.toLowerCase()];
+  };
+  const byLastName = (a, b) => {
+    const ak = lastNameKey(a[0]), bk = lastNameKey(b[0]);
+    if (ak[0] !== bk[0]) return ak[0] < bk[0] ? -1 : 1;
+    return ak[1] < bk[1] ? -1 : ak[1] > bk[1] ? 1 : 0;
+  };
+  const houseList = [...houseCounts.entries()].sort(byLastName);
+  const senateList = [...senateCounts.entries()].sort(byLastName);
+
+  const optHtml = ([name, count]) =>
+    `<option value="${escapeHtml(name)}">${escapeHtml(name)} (${count})</option>`;
+
+  const sel = document.getElementById('sponsorFilter');
+  sel.innerHTML =
+    `<option value="">All sponsors</option>` +
+    `<optgroup label="House">${houseList.map(optHtml).join('')}</optgroup>` +
+    `<optgroup label="Senate">${senateList.map(optHtml).join('')}</optgroup>`;
+}
+
+// ---------- filtering & sorting ----------
+function getFiltered() {
+  const q = state.query.trim().toLowerCase();
+  return BILLS.filter(b => {
+    if (state.sponsor) {
+      const allSponsors = [...b.house, ...b.senate];
+      if (!allSponsors.includes(state.sponsor)) return false;
+    }
+    if (state.ceremony && b.action !== 'Sign - Ceremony') return false;
+    if (state.subject && !b.subjects.includes(state.subject)) return false;
+    if (q) {
+      const hay = (b.id + ' ' + b.title + ' ' + b.longTitle + ' ' +
+                   b.house.join(' ') + ' ' + b.senate.join(' ') + ' ' +
+                   b.subjects.join(' ')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a, b) => {
+    const k = state.sortKey;
+    let av = a[k], bv = b[k];
+    if (k === 'id') {
+      // sort by chamber then number
+      av = a.id; bv = b.id;
+    }
+    let cmp;
+    if (typeof av === 'string') cmp = av.localeCompare(bv);
+    else cmp = (av < bv ? -1 : av > bv ? 1 : 0);
+    return state.sortDir === 'asc' ? cmp : -cmp;
+  });
+}
+
+function isFiltering() {
+  return state.query || state.sponsor || state.ceremony || state.subject;
+}
+
+// ---------- render ----------
+function render() {
+  const rows = getFiltered();
+
+  // Update sort arrows
+  document.querySelectorAll('thead th.sortable').forEach(th => {
+    th.classList.remove('sorted-asc', 'sorted-desc');
+    const arrow = th.querySelector('.sort-arrow');
+    if (th.dataset.sort === state.sortKey) {
+      th.classList.add(state.sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+      arrow.textContent = state.sortDir === 'asc' ? '↑' : '↓';
+    } else {
+      arrow.textContent = '';
+    }
+  });
+
+  // Result count
+  const rc = document.getElementById('resultCount');
+  if (rows.length === BILLS.length) {
+    rc.textContent = `Showing all ${BILLS.length} bills`;
+  } else {
+    rc.textContent = `Showing ${rows.length} of ${BILLS.length} bills`;
+  }
+  document.getElementById('resetBtn').hidden = !isFiltering();
+
+  const tbody = document.getElementById('billBody');
+  if (rows.length === 0) {
+    tbody.innerHTML = '';
+    document.getElementById('emptyState').hidden = false;
+    return;
+  }
+  document.getElementById('emptyState').hidden = true;
+
+  const html = [];
+  for (const b of rows) {
+    const ch = chamberOf(b.id);
+    const ceremony = b.action === 'Sign - Ceremony';
+    const isOpen = state.expanded.has(b.id);
+    const tags = b.subjects.map(s => `<span class="tag">${escapeHtml(s)}</span>`).join('');
+    html.push(`
+      <tr class="bill-row${isOpen ? ' expanded' : ''}" data-id="${escapeHtml(b.id)}" tabindex="0">
+        <td class="col-id"><span class="bill-id ${ch}">${escapeHtml(b.id)}</span></td>
+        <td class="col-title">
+          ${ceremony ? '<span class="ceremony-mark" title="Public ceremony signing">★</span>' : ''}
+          <span class="bill-title">${escapeHtml(b.title)}</span>
+        </td>
+        <td class="col-date"><span class="bill-date">${fmtDate(b.date)}</span></td>
+        <td class="col-subjects"><div class="subject-tags">${tags}</div></td>
+      </tr>
+    `);
+    if (isOpen) {
+      html.push(`
+        <tr class="detail-row">
+          <td colspan="4">
+            <div class="detail-content">
+              <div class="detail-section">
+                <h4>Long title</h4>
+                <p class="long-title">${escapeHtml(capitalizeDepartments(b.longTitle))}</p>
+                <a class="external-link" href="https://leg.colorado.gov/bills/${b.id.toLowerCase()}" target="_blank" rel="noopener">
+                  View on leg.colorado.gov →
+                </a>
+              </div>
+              <div class="detail-section">
+                <h4>Prime sponsors</h4>
+                <div class="sponsor-list">
+                  ${b.house.length ? `<div class="sponsor-line"><span class="sponsor-label">House</span> ${b.house.map(escapeHtml).join(', ')}</div>` : ''}
+                  ${b.senate.length ? `<div class="sponsor-line"><span class="sponsor-label">Senate</span> ${b.senate.map(escapeHtml).join(', ')}</div>` : ''}
+                </div>
+                <h4 style="margin-top:14px;">Signing</h4>
+                <div class="sponsor-line">${escapeHtml(b.action.replace('Sign - ', ''))} on ${fmtDate(b.date)}</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `);
+    }
+  }
+  tbody.innerHTML = html.join('');
+}
+
+// ---------- events ----------
+function attachEvents() {
+  const search = document.getElementById('search');
+  const clear = document.getElementById('searchClear');
+  search.addEventListener('input', () => {
+    state.query = search.value;
+    clear.classList.toggle('visible', !!search.value);
+    render();
+  });
+  clear.addEventListener('click', () => {
+    search.value = '';
+    state.query = '';
+    clear.classList.remove('visible');
+    render();
+    search.focus();
+  });
+
+  document.getElementById('sponsorFilter').addEventListener('change', (e) => {
+    state.sponsor = e.target.value;
+    render();
+  });
+  const ceremonyBtn = document.getElementById('ceremonyToggle');
+  ceremonyBtn.addEventListener('click', () => {
+    state.ceremony = !state.ceremony;
+    ceremonyBtn.setAttribute('aria-pressed', state.ceremony ? 'true' : 'false');
+    render();
+  });
+  document.getElementById('subjectFilter').addEventListener('change', (e) => {
+    state.subject = e.target.value;
+    render();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    state.query = '';
+    state.sponsor = '';
+    state.ceremony = false;
+    state.subject = '';
+    document.getElementById('search').value = '';
+    document.getElementById('sponsorFilter').value = '';
+    document.getElementById('subjectFilter').value = '';
+    document.getElementById('searchClear').classList.remove('visible');
+    ceremonyBtn.setAttribute('aria-pressed', 'false');
+    render();
+  });
+
+  document.querySelectorAll('thead th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sort;
+      if (state.sortKey === key) {
+        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sortKey = key;
+        state.sortDir = key === 'date' ? 'desc' : 'asc';
+      }
+      render();
+    });
+  });
+
+  // Click anywhere on the row toggles expansion
+  document.getElementById('billBody').addEventListener('click', (e) => {
+    const row = e.target.closest('.bill-row');
+    if (!row) return;
+    const id = row.dataset.id;
+    if (state.expanded.has(id)) state.expanded.delete(id);
+    else state.expanded.add(id);
+    render();
+  });
+  // Keyboard support
+  document.getElementById('billBody').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const row = e.target.closest('.bill-row');
+    if (!row) return;
+    e.preventDefault();
+    const id = row.dataset.id;
+    if (state.expanded.has(id)) state.expanded.delete(id);
+    else state.expanded.add(id);
+    render();
+  });
+}
+
+// ---------- init ----------
+buildSubjectFilter();
+buildSponsorFilter();
+attachEvents();
+render();
+
+// last entry footer
+const lastDate = BILLS.map(b => b.date).sort().slice(-1)[0];
+document.getElementById('lastEntry').textContent = `Most recent signing: ${fmtDate(lastDate)}`;
+</script>
+</body>
+</html>
