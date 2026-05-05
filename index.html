@@ -24,7 +24,12 @@
     --row-hover: #fdf6e8;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;        /* no document-level scroll; the table scrolls internally */
+  }
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background: var(--bg);
@@ -32,11 +37,19 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     line-height: 1.5;
+    display: flex;
+    flex-direction: column;
   }
   .wrap {
     max-width: 1200px;
+    width: 100%;
     margin: 0 auto;
-    padding: 32px 20px 64px;
+    padding: 16px 20px;
+    box-sizing: border-box;
+    flex: 1;                 /* fill the iframe height */
+    min-height: 0;           /* lets the flex child actually shrink */
+    display: flex;
+    flex-direction: column;
   }
 
   /* Header */
@@ -198,7 +211,11 @@
     background: var(--surface);
     border: 1px solid var(--rule-strong);
     border-radius: 8px;
-    overflow: hidden;
+    flex: 1;                          /* take remaining vertical space */
+    min-height: 0;                    /* required so it can shrink to fit */
+    overflow: auto;                   /* this is what scrolls now */
+    overscroll-behavior: contain;     /* don't chain scroll to parent page */
+    -webkit-overflow-scrolling: touch;
   }
   table {
     width: 100%;
@@ -361,8 +378,8 @@
 
   /* Footer */
   footer {
-    margin-top: 24px;
-    padding-top: 16px;
+    margin-top: 12px;
+    padding-top: 10px;
     border-top: 1px solid var(--rule);
     font-size: 12px;
     color: var(--ink-muted);
@@ -370,12 +387,13 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
+    flex-shrink: 0;          /* don't squeeze the footer when the table is tall */
   }
   footer a { color: var(--ink-soft); }
 
   /* Responsive */
   @media (max-width: 780px) {
-    .wrap { padding: 20px 14px 48px; }
+    .wrap { padding: 12px 14px; }
     /* On mobile, hide subjects column to save space */
     th.col-subjects, td.col-subjects { display: none; }
     thead th { padding: 10px 10px; font-size: 10px; }
@@ -735,14 +753,29 @@ function attachEvents() {
     });
   });
 
+  // Toggle a row's expanded state, re-render, and make sure the row
+  // (and its newly-revealed details) is visible inside the table's
+  // scroll container. block: 'nearest' avoids unnecessary scrolling
+  // when the row is already comfortably on screen.
+  function toggleRow(row) {
+    const id = row.dataset.id;
+    const wasExpanded = state.expanded.has(id);
+    if (wasExpanded) state.expanded.delete(id);
+    else state.expanded.add(id);
+    render();
+    if (!wasExpanded) {
+      const fresh = document.querySelector(
+        `.bill-row[data-id="${CSS.escape(id)}"]`
+      );
+      if (fresh) fresh.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
   // Click anywhere on the row toggles expansion
   document.getElementById('billBody').addEventListener('click', (e) => {
     const row = e.target.closest('.bill-row');
     if (!row) return;
-    const id = row.dataset.id;
-    if (state.expanded.has(id)) state.expanded.delete(id);
-    else state.expanded.add(id);
-    render();
+    toggleRow(row);
   });
   // Keyboard support
   document.getElementById('billBody').addEventListener('keydown', (e) => {
@@ -750,10 +783,7 @@ function attachEvents() {
     const row = e.target.closest('.bill-row');
     if (!row) return;
     e.preventDefault();
-    const id = row.dataset.id;
-    if (state.expanded.has(id)) state.expanded.delete(id);
-    else state.expanded.add(id);
-    render();
+    toggleRow(row);
   });
 }
 
